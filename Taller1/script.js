@@ -1,4 +1,5 @@
 use tienda;
+
 db.productos.insertMany(
 [
     {
@@ -693,84 +694,74 @@ db.productos.insertMany(
     }
   ]);
 
-  db.productos.aggregate([
-    {
-      $match: {
-        precio: { $gt: 100 }
-      }
-    },
-    {
-      $unwind: "$comentarios"
-    },
-    {
-      $group: {
-        _id: "$_id",
-        nombre: { $first: "$nombre" },
-        precio: { $first: "$precio" },
-        totalComentarios: { $sum: 1 }
-      }
-    },
-    {
-      $match: {
-        totalComentarios: { $gt: 3 }
-      }
-    },
-    {
-      $sort: {
-        precio: -1
-      }
-    }
-  ]);
+//1 Listar productos con más de 3 comentarios y cuyo precio supere $100 //
 
-  db.productos.aggregate([
-    {
-      $group: {
-        _id: "$categoria",
-        cantidad: { $sum: 1 },
-        promedioPrecio: { $avg: "$precio" },
-        stockMaximo: { $max: "$stock" }
-      }
-    }
-  ]);
-  db.productos.aggregate([
-    {
-      $match: {
-        nombre: { $regex: "^[AP]", $options: "i" }
-      }
-    }
-  ]);
+db.productos.aggregate([
+  {$match: {precio: { $gt: 100 } } },
 
-  db.productos.aggregate([
-    {
-      $match: {
-        "comentarios.comentario": { $regex: "(recomendado|perfecto)", $options: "i" }
-      }
-    },
-    { $project: { nombre: 1, descripcion: 1, comentarios: 1 } }
-  ]);
+  {$unwind: "$comentarios"},
+  {
+    $group: {
+    _id: "$_id",
+    nombre: {$first: "$nombre"},
+    precio: {$first: "$precio"},
+    totalComentarios: {$sum: 1 }
+    }},
 
-  db.productos.aggregate([
-    { $unwind: "$comentarios" },
-    {
-      $group: {
-        _id: "$comentarios.usuario",
-        total: { $sum: 1 }
-      }
-    },
-    { $sort: { total: -1 } },
-    {
-      $limit: 5
+  {$match: { totalComentarios: {$gt: 3 } } },
+
+  {$sort: { precio: -1 } },
+  {$project: {_id: 0, nombre: 1, precio: 1, totalComentarios: 1} }
+]);
+
+//2 Buscar productos con nombre que comience con letra "A" o "P" usando REGEX //
+
+db.productos.aggregate([
+  {
+    $match: {
+      nombre: {$regex: "^[ap]", $options: "i"}
     }
-  ]);
+  }
+]);
   
 
+//3 Agrupar por categoría y obtener: cantidad, promedio de precio, y stock máximo //
+
+db.productos.aggregate([
+  { $group: { 
+    _id: "$categoria", 
+    cantidad: {$sum: 1},
+    precioPromedio: { $avg: "$precio"},
+    stockMaximo: {$max: "$stock"}
+    }
+  }
+]);
+
+//4 Filtrar productos que tengan al menos un comentario con la palabra “recomendado” o “perfecto” //
+
+db.productos.aggregate([
+  {
+    $match: {
+      "comentarios.comentario": {$regex: "(recomendado|perfecto)", $options: "i"}
+    }
+  },
+  {$project: {nombre: 1, descripcion: 1, comentarios: 1} }
+]);
 
 
+// 5 Mostrar los 5 usuarios con más comentarios hechos //
 
-
-
-
-
-
-
+db.productos.aggregate([
+  {$unwind: "$comentarios"},
+  {
+    $group: {
+      _id: "$comentarios.usuario",
+      total: {$sum: 1 }
+    }
+  }, 
+  {$sort: {total: -1} },
+  {
+    $limit: 5
+  }
+]);
 
