@@ -251,35 +251,90 @@ Realiza los siguientes ejercicios combinando múltiples etapas:
 
 1. **Listar productos con más de 3 comentarios y cuyo precio supere $100**
 
-```javascript
+```javascript 
+db.productos.aggregate([
+  {$match: {precio: { $gt: 100 } } },
+
+  {$unwind: "$comentarios"},
+  {
+    $group: {
+    _id: "$_id",
+    nombre: {$first: "$nombre"},
+    precio: {$first: "$precio"},
+    totalComentarios: {$sum: 1 }
+    }},
+
+  {$match: { totalComentarios: {$gt: 3 } } },
+
+  {$sort: { precio: -1 } },
+  {$project: {_id: 0, nombre: 1, precio: 1, totalComentarios: 1} }
+]);
 ```
 
 
 
-1. **Buscar productos con nombre que comience con letra "A" o "P" usando REGEX**
+2. **Buscar productos con nombre que comience con letra "A" o "P" usando REGEX**
 
 ```javascript
+db.productos.aggregate([
+  {
+    $match: {
+      nombre: {$regex: "^[ap]", $options: "i"}
+    }
+  }
+]);
+  
 ```
 
 
 
-1. **Agrupar por categoría y obtener: cantidad, promedio de precio, y stock máximo**
+3. **Agrupar por categoría y obtener: cantidad, promedio de precio, y stock máximo**
 
 ```javascript
+db.productos.aggregate([
+  { $group: { 
+    _id: "$categoria", 
+    cantidad: {$sum: 1},
+    precioPromedio: { $avg: "$precio"},
+    stockMaximo: {$max: "$stock"}
+    }
+  }
+]);
 ```
 
 
 
-1. **Filtrar productos que tengan al menos un comentario con la palabra “recomendado” o “perfecto”**
+4. **Filtrar productos que tengan al menos un comentario con la palabra “recomendado” o “perfecto”**
 
 ```javascript
+db.productos.aggregate([
+  {
+    $match: {
+      "comentarios.comentario": {$regex: "(recomendado|perfecto)", $options: "i"}
+    }
+  },
+  {$project: {nombre: 1, descripcion: 1, comentarios: 1} }
+]);
 
 ```
 
 
 
-1. **Mostrar los 5 usuarios con más comentarios hechos**
+5. **Mostrar los 5 usuarios con más comentarios hechos**
 
 ```javascript
+db.productos.aggregate([
+  {$unwind: "$comentarios"},
+  {
+    $group: {
+      _id: "$comentarios.usuario",
+      total: {$sum: 1 }
+    }
+  }, 
+  {$sort: {total: -1} },
+  {
+    $limit: 5
+  }
+]);
 ```
 
